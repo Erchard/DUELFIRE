@@ -93,21 +93,35 @@ MVP uses open RTDB rules in `database.rules.json`. For a real product, security 
 
 ## P2: Solo AR Demo 0.2A
 
-- [ ] Add `Solo AR Demo` button on Start Screen.
-- [ ] Confirm ARCore availability on Redmi Note 7.
-- [ ] Add Google Play Services for AR install/update handling.
-- [ ] Add `CAMERA` permission and permission request flow.
-- [ ] Add SceneView or direct ARCore dependency.
-- [ ] Add full-screen AR camera view.
-- [ ] Detect plane or stable tracking.
-- [ ] Place simple virtual enemy in front of player.
-- [ ] Draw center crosshair overlay.
-- [ ] Show player HP and virtual enemy HP.
-- [ ] Implement screen-space hit / miss calculation.
-- [ ] Implement variable damage by aim distance.
-- [ ] Add virtual enemy return fire every 3 seconds.
-- [ ] Show VICTORY / DEFEAT locally.
+- [x] Add `Solo AR` entry on Start Screen.
+- [ ] Confirm ARCore availability on Redmi Note 7 (and other test devices).
+- [x] Add Google Play Services for AR (via SceneView / ARCore dependency).
+- [x] Add `CAMERA` permission and AR permission flow (SceneView handler).
+- [x] Add SceneView AR (`arsceneview`).
+- [x] Add full-screen AR camera view.
+- [x] Detect plane or stable tracking (horizontal plane + anchor).
+- [x] Place simple virtual enemy in AR (procedural cube).
+- [x] Draw center crosshair overlay.
+- [x] Show player HP and virtual enemy HP (layout to compact — see backlog below).
+- [ ] Implement screen-space hit / miss calculation (optional refinement).
+- [ ] Implement variable damage by aim distance (optional).
+- [x] Virtual enemy return fire on a timer (needs gating — see backlog).
+- [x] Show VICTORY / DEFEAT locally (shared demo duel rules).
 - [ ] Fall back to current Demo Mode if AR is unavailable.
+
+## P2: Solo AR — backlog (playtest feedback)
+
+Зафіксовано з реального тесту; виконувати по черзі.
+
+- [ ] **FIRE лишається неактивною** — розібрати гейтинг: `anchorReady` / `TrackingState` / `fireBlockedUntilMs` / `fireEnabled` у `SoloArScreen`. Додати явні статуси («Шукаю поверхню…», «Стабілізую ціль…») коли кнопка вимкнена. За потреби послабити критерій готовності або розвести «плейсмент ворога» і «дозвіл стріляти».
+
+- [ ] **Ворог стріляє занадто рано** — у Solo AR не запускати відповідний корутин (`demoEnemyJob`) або не викликати `demoEnemyFire`, доки гравець **хоча б раз** не влучив у ворога (прапорець у `DuelViewModel` для `SOLO_AR` / `isSoloArMode`). Після першого влучання залишити або збільшити інтервал пострілів.
+
+- [ ] **Ворога майже не видно** — без Unity/Unreal найдешевше: збільшити куб і підняти над площиною (`CubeNode` size/center, scale); контрастніший матеріал і освітлення; за потреби один **безкоштовний GLB** у `assets` + `ModelNode` (відкриті паки на кшталт Poly Pizza / Kenney) — без окремого рушія. Перевірити відстань/висоту anchor відносно камери.
+
+- [ ] **Приціл при влучному наведенні** — при hit-test з центру екрана по ворогу змінювати **колір і/або розмір** хрестика (`animateColorAsState` / `animateFloatAsState` у `SoloArScreen`).
+
+- [ ] **Компактні HP зверху** — суттєво зменшити індикатори: один короткий рядок у **top** екрана (менші шрифти, тонші бари), без колонки що розтягується на всю висоту; AR лишається на весь екран під легким оверлеєм.
 
 ## P2: ML Target Detection 0.3
 
