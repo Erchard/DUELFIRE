@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.util.Log
 import com.google.firebase.FirebaseApp
 import com.mvp.duelfire.data.DuelRepository
 import com.mvp.duelfire.data.FirebaseDuelRepository
@@ -40,10 +41,26 @@ class MainActivity : ComponentActivity() {
             if (FirebaseApp.getApps(this).isEmpty()) {
                 FirebaseApp.initializeApp(this)
             }
+            val dbUrl = FirebaseApp.getInstance().options.databaseUrl?.toString()?.trim().orEmpty()
+            if (dbUrl.isEmpty()) {
+                Log.e(
+                    TAG,
+                    "google-services.json has no Realtime Database URL. " +
+                        "Create Realtime Database in Firebase Console, then re-download google-services.json to app/."
+                )
+                return OfflineDuelRepository(
+                    userHint = "Realtime Database is not linked to this app. " +
+                        "In Firebase: Build → Realtime Database → Create database, then download a new google-services.json into app/."
+                )
+            }
             FirebaseDuelRepository()
         } catch (_: Exception) {
             OfflineDuelRepository()
         }
+    }
+
+    private companion object {
+        private const val TAG = "DuelFire"
     }
 }
 

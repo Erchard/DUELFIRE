@@ -12,13 +12,16 @@ import com.mvp.duelfire.domain.Duel
 import com.mvp.duelfire.domain.DuelRules
 import com.mvp.duelfire.domain.GameConstants
 import com.mvp.duelfire.domain.Player
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 enum class ScreenState {
     Start,
@@ -51,6 +54,7 @@ class DuelViewModel(
     private var observeJob: Job? = null
     private var demoEnemyJob: Job? = null
     private var cooldownJob: Job? = null
+    private var networkJob: Job? = null
     private var lastSeenEventTimestamp = 0L
 
     fun updatePlayerName(value: String) {
@@ -62,23 +66,37 @@ class DuelViewModel(
     }
 
     fun createDuel(playerName: String = uiState.value.playerName) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            repository.createDuel(playerName.trim())
-                .onSuccess { code ->
-                    _uiState.update {
-                        it.copy(
-                            duelCode = code,
-                            myPlayerId = GameConstants.PLAYER_1,
-                            screenState = ScreenState.Waiting,
-                            statusMessage = "WAITING",
-                            isLoading = false,
-                            isDemoMode = false
-                        )
-                    }
-                    observeDuel(code)
+        networkJob?.cancel()
+        networkJob = viewModelScope.launch {
+            try {
+                _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+                val result = withTimeoutOrNull(GameConstants.NETWORK_TIMEOUT_MS) {
+                    repository.createDuel(playerName.trim())
                 }
-                .onFailure { showError(it.message ?: "Could not create duel.") }
+                if (!isActive) return@launch
+                when {
+                    result == null ->
+                        showError("Timeout. Check Wi‑Fi and that Realtime Database is enabled in Firebase.")
+                    else -> result
+                        .onSuccess { code ->
+                            _uiState.update {
+                                it.copy(
+                                    duelCode = code,
+                                    myPlayerId = GameConstants.PLAYER_1,
+                                    screenState = ScreenState.Waiting,
+                                    statusMessage = "WAITING",
+                                    isLoading = false,
+                                    isDemoMode = false
+                                )
+                            }
+                            observeDuel(code)
+                        }
+                        .onFailure { showError(it.message ?: "Could not create duel.") }
+                }
+            } catch (e: CancellationException) {
+                _uiState.update { it.copy(isLoading = false) }
+                throw e
+            }
         }
     }
 
@@ -88,33 +106,47 @@ class DuelViewModel(
             showError("Enter a 4 digit duel code.")
             return
         }
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            repository.joinDuel(cleanCode, playerName.trim())
-                .onSuccess {
-                    _uiState.update {
-                        it.copy(
-                            duelCode = cleanCode,
-                            myPlayerId = GameConstants.PLAYER_2,
-                            screenState = ScreenState.Waiting,
-                            statusMessage = "WAITING",
-                            isLoading = false,
-                            isDemoMode = false
-                        )
-                    }
-                    observeDuel(cleanCode)
+        networkJob?.cancel()
+        networkJob = viewModelScope.launch {
+            try {
+                _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+                val result = withTimeoutOrNull(GameConstants.NETWORK_TIMEOUT_MS) {
+                    repository.joinDuel(cleanCode, playerName.trim())
                 }
-                .onFailure { e ->
-                    showError(
-                        when (e) {
-                            is DuelNotFoundException -> e.message ?: "Duel not found."
-                            is DuelFullException -> e.message ?: "This duel already has two players."
-                            is DuelAlreadyStartedException -> e.message ?: "This duel has already started."
-                            is DuelJoinRaceException -> e.message ?: "Could not join. Please try again."
-                            else -> e.message ?: "Could not join duel."
+                if (!isActive) return@launch
+                when {
+                    result == null ->
+                        showError("Timeout. Check Wi‑Fi and that Realtime Database is enabled in Firebase.")
+                    else -> result
+                        .onSuccess {
+                            _uiState.update {
+                                it.copy(
+                                    duelCode = cleanCode,
+                                    myPlayerId = GameConstants.PLAYER_2,
+                                    screenState = ScreenState.Waiting,
+                                    statusMessage = "WAITING",
+                                    isLoading = false,
+                                    isDemoMode = false
+                                )
+                            }
+                            observeDuel(cleanCode)
                         }
-                    )
+                        .onFailure { e ->
+                            showError(
+                                when (e) {
+                                    is DuelNotFoundException -> e.message ?: "Duel not found."
+                                    is DuelFullException -> e.message ?: "This duel already has two players."
+                                    is DuelAlreadyStartedException -> e.message ?: "This duel has already started."
+                                    is DuelJoinRaceException -> e.message ?: "Could not join. Please try again."
+                                    else -> e.message ?: "Could not join duel."
+                                }
+                            )
+                        }
                 }
+            } catch (e: CancellationException) {
+                _uiState.update { it.copy(isLoading = false) }
+                throw e
+            }
         }
     }
 
@@ -193,6 +225,7 @@ class DuelViewModel(
         val snap = _uiState.value
         val code = snap.duelCode
         val demo = snap.isDemoMode
+        networkJob?.cancel()
         observeJob?.cancel()
         demoEnemyJob?.cancel()
         cooldownJob?.cancel()
@@ -205,6 +238,7 @@ class DuelViewModel(
     }
 
     fun startDemoMode() {
+        networkJob?.cancel()
         val now = System.currentTimeMillis()
         val duel = Duel(
             duelCode = "DEMO",

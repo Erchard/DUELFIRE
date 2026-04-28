@@ -69,6 +69,18 @@ This list is ordered by investor-demo priority.
 - [ ] Avoid leaving stale waiting duels forever.
 - [ ] Replace temporary Firebase rules before any public test.
 
+## P1: Firebase production hardening (post-MVP)
+
+MVP uses open RTDB rules in `database.rules.json`. For a real product, security is enforced on Firebase servers (rules + optional Functions); the Android app cannot replace that.
+
+- [ ] Add **Firebase Authentication** (anonymous, phone, or other) and require `auth != null` in rules.
+- [ ] Extend duel model with **participant identity** (e.g. `hostUid` / `guestUid` or `participants/{auth.uid}`) so rules can allow read/write only for players in that duel.
+- [ ] Replace open `.read/.write: true` with **scoped rules** under `duels/{duelId}` (validate allowed children and types where practical).
+- [ ] Enable **Firebase App Check** to reduce abuse from non-app clients.
+- [ ] Add **Cloud Functions** (Admin SDK) or a small backend to **validate combat actions** (fire, HP, cooldown, finish) if competitive integrity matters; avoid trusting client-only HP writes for ranked play.
+- [ ] Consider **rate limiting** / cleanup of stale duels (Functions or scheduled job).
+- [ ] Document production `database.rules.json` (or multi-env rules) and deploy path (`firebase deploy --only database`).
+
 ## P2: Camera Aim Assist 0.2
 
 - [ ] Add CameraX dependencies.

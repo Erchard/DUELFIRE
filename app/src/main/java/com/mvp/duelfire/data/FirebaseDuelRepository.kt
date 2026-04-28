@@ -1,13 +1,14 @@
 package com.mvp.duelfire.data
 
 import android.util.Log
+import com.google.firebase.Firebase
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.DatabaseException
 import com.google.firebase.database.MutableData
 import com.google.firebase.database.Transaction
 import com.google.firebase.database.ValueEventListener
-import com.google.firebase.database.ktx.database
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.database.database
 import com.mvp.duelfire.domain.Duel
 import com.mvp.duelfire.domain.DuelEvent
 import com.mvp.duelfire.domain.DuelRules
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
 class FirebaseDuelRepository : DuelRepository {
@@ -26,10 +28,11 @@ class FirebaseDuelRepository : DuelRepository {
 
     override suspend fun createDuel(playerName: String): Result<String> = runCatching {
         val cleanName = playerName.ifBlank { "Player 1" }
-        repeat(20) {
+        repeat(MAX_CREATE_ATTEMPTS) {
             val code = CodeGenerator.fourDigitCode()
-            if (tryCreateDuelAtomically(code, cleanName)) {
-                return@runCatching code
+            when (tryCreateDuelAtomically(code, cleanName)) {
+                CreateTxResult.Created -> return@runCatching code
+                CreateTxResult.Busy -> Unit
             }
         }
         error("Could not generate a free duel code. Try again.")
@@ -54,6 +57,7 @@ class FirebaseDuelRepository : DuelRepository {
             )
         }
         if (tx.isSuccess) return tx
+        if (tx.exceptionOrNull() is DatabaseException) return tx
 
         return try {
             val snap = duels.child(c).get().await()
@@ -93,6 +97,7 @@ class FirebaseDuelRepository : DuelRepository {
             )
         }
         if (tx.isSuccess) return tx
+        if (tx.exceptionOrNull() is DatabaseException) return tx
 
         return try {
             val snap = duels.child(c).get().await()
@@ -139,7 +144,7 @@ class FirebaseDuelRepository : DuelRepository {
             }
 
             override fun onCancelled(error: DatabaseError) {
-                Log.w(TAG, "observeDuel cancelled: ${error.message}")
+                Log.w(TAG, "observeDuel: ${error.code} ${error.message}")
                 trySend(null)
                 close()
             }
@@ -175,11 +180,13 @@ class FirebaseDuelRepository : DuelRepository {
         duels.child(code.trim()).removeValue().await()
     }
 
-    private suspend fun tryCreateDuelAtomically(code: String, cleanName: String): Boolean =
+    private enum class CreateTxResult { Created, Busy }
+
+    private suspend fun tryCreateDuelAtomically(code: String, cleanName: String): CreateTxResult =
         suspendCoroutine { continuation ->
             duels.child(code).runTransaction(object : Transaction.Handler {
                 override fun doTransaction(currentData: MutableData): Transaction.Result {
-                    if (currentData.getValue(Duel::class.java) != null) {
+                    if (currentData.value != null) {
                         return Transaction.abort()
                     }
                     val now = System.currentTimeMillis()
@@ -200,8 +207,16 @@ class FirebaseDuelRepository : DuelRepository {
 
                 override fun onComplete(error: DatabaseError?, committed: Boolean, snapshot: DataSnapshot?) {
                     when {
-                        error != null -> continuation.resume(false)
-                        else -> continuation.resume(committed)
+                        error != null -> {
+                            if (error.code == DatabaseError.PERMISSION_DENIED) {
+                                continuation.resumeWithException(error.toException())
+                            } else {
+                                Log.w(TAG, "createDuel tx $code: ${error.code} ${error.message}")
+                                continuation.resume(CreateTxResult.Busy)
+                            }
+                        }
+                        committed -> continuation.resume(CreateTxResult.Created)
+                        else -> continuation.resume(CreateTxResult.Busy)
                     }
                 }
             })
@@ -231,5 +246,6 @@ class FirebaseDuelRepository : DuelRepository {
 
     private companion object {
         private const val TAG = "FirebaseDuelRepo"
+        private const val MAX_CREATE_ATTEMPTS = 20
     }
 }

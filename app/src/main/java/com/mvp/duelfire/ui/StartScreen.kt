@@ -83,7 +83,7 @@ fun StartScreen(
         Spacer(Modifier.height(14.dp))
         OutlinedButton(
             onClick = onDemo,
-            enabled = !state.isLoading,
+            enabled = true,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Demo Mode")

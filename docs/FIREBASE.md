@@ -27,6 +27,8 @@ app/google-services.json
 
 The real file is ignored by Git. Keep `app/google-services.example.json` as a placeholder only.
 
+**Important:** create **Realtime Database** in the Firebase project *before* or *then* re-download `google-services.json`. If `project_info` in the JSON has no `firebase_url`, the Android SDK cannot open the correct DB instance (logcat: `PersistentConnection` / *URL configured incorrectly*). After enabling RTDB, download the file again and replace `app/google-services.json`.
+
 ## App initialization
 
 `MainActivity` picks the repository as follows:
@@ -34,18 +36,23 @@ The real file is ignored by Git. Keep `app/google-services.example.json` as a pl
 - if `FirebaseApp.getApps(context)` is non-empty, or `initializeApp` succeeds, use `FirebaseDuelRepository`;
 - otherwise use `OfflineDuelRepository` (demo without config).
 
-## Temporary MVP Rules
+## Realtime Database rules (required server-side step)
 
-For local demo only:
+Security rules run **only** on Firebase’s servers. The Android app cannot publish or bypass them. A new database often ships with rules that **deny** client writes until you publish something else.
 
-```json
-{
-  "rules": {
-    ".read": true,
-    ".write": true
-  }
-}
-```
+This repo includes:
+
+- `database.rules.json` — MVP rules (open read/write for local demo)
+- `firebase.json` — points the Firebase CLI at that file
+
+**Option A — Console:** Firebase Console → **Realtime Database** → **Rules** → paste the contents of `database.rules.json` → **Publish**.
+
+**Option B — CLI:** from the repo root, after `firebase login` and `firebase use <your-project-id>`:  
+`firebase deploy --only database`
+
+Until rules allow access to `duels`, RTDB operations fail with `Permission denied` in logcat; that is expected until the step above is done.
+
+Gradle follows current Firebase guidance: **Google services plugin 4.4.4** (root `build.gradle.kts`), **Firebase BoM 34.12.0**, dependency **`com.google.firebase:firebase-database`** (not `firebase-database-ktx`; KTX APIs live in the main module since BoM 34 — see [Kotlin migration](https://firebase.google.com/docs/android/kotlin-migration)).
 
 Do not use these rules for public testing or production.
 

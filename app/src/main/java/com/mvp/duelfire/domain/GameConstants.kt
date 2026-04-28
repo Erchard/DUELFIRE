@@ -5,6 +5,9 @@ object GameConstants {
     const val DAMAGE_PER_SHOT = 25
     const val FIRE_COOLDOWN_MS = 2000L
 
+    /** Network timeout for create/join so the UI does not stay in isLoading forever. */
+    const val NETWORK_TIMEOUT_MS = 25_000L
+
     /** UI text after a hit (kept in sync with [DAMAGE_PER_SHOT]). */
     val DAMAGE_SUMMARY: String get() = "-$DAMAGE_PER_SHOT HP"
 
