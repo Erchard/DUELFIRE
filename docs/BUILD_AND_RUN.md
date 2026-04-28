@@ -13,6 +13,33 @@ Install:
 
 The easiest route is to install Android Studio once and let it install the Android SDK. The project can still be edited and built from Cursor/Codex.
 
+## Lightweight Local Setup
+
+This machine uses a minimal portable toolchain instead of Android Studio:
+
+```text
+D:\AndroidTools\
+  jdk17\
+  android-sdk\
+  gradle\
+  gradle-cache\
+```
+
+Installed SDK packages:
+
+```text
+platform-tools
+platforms;android-35
+build-tools;35.0.0
+```
+
+Helper scripts:
+
+```powershell
+.\scripts\build-debug.ps1
+.\scripts\install-debug.ps1
+```
+
 ## Firebase File
 
 Add:
@@ -29,6 +56,12 @@ From project root:
 
 ```bash
 gradle assembleDebug
+```
+
+On this machine, prefer:
+
+```powershell
+.\scripts\build-debug.ps1
 ```
 
 If Gradle Wrapper is added:
@@ -64,6 +97,12 @@ Install:
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
+On this machine, prefer:
+
+```powershell
+.\scripts\install-debug.ps1
+```
+
 ## Two Phone Demo Setup
 
 1. Install the same APK on both phones.
@@ -78,4 +117,4 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ## Known Local Environment Issue
 
-At the time this documentation was written, this machine did not expose `java`, `gradle`, or `adb` in the current execution environment. The code exists, but the APK still needs a real Android build environment to verify compilation.
+This repository was successfully built with the lightweight toolchain above. The debug APK was installed on a connected Redmi Note 7.

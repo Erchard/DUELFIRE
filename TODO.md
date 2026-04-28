@@ -4,21 +4,21 @@ This list is ordered by investor-demo priority.
 
 ## P0: Make Version 0.1 Buildable
 
-- [ ] Install or configure local JDK 17.
-- [ ] Install or configure Android SDK.
+- [x] Install or configure local JDK 17.
+- [x] Install or configure Android SDK.
 - [ ] Add or generate Gradle wrapper files.
 - [ ] Add real `app/google-services.json`.
-- [ ] Run `gradle assembleDebug`.
-- [ ] Fix any compile errors from the first real Android build.
-- [ ] Produce `app/build/outputs/apk/debug/app-debug.apk`.
+- [x] Run `gradle assembleDebug`.
+- [x] Fix any compile errors from the first real Android build.
+- [x] Produce `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## P0: Verify On One Phone
 
-- [ ] Enable Developer Options on Android phone.
-- [ ] Enable USB Debugging.
-- [ ] Confirm `adb devices` shows the phone as `device`.
-- [ ] Install debug APK with `adb install -r`.
-- [ ] Open app.
+- [x] Enable Developer Options on Android phone.
+- [x] Enable USB Debugging.
+- [x] Confirm `adb devices` shows the phone as `device`.
+- [x] Install debug APK with `adb install -r`.
+- [x] Open app.
 - [ ] Test Start Screen.
 - [ ] Test Demo Mode.
 - [ ] Verify FIRE reduces fake enemy HP.
