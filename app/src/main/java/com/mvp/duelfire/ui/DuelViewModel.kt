@@ -213,6 +213,9 @@ class DuelViewModel(
                 val message = statusFor(duel, myPlayerId)
                 val wasHit = duel?.lastEvent?.targetPlayerId == myPlayerId &&
                     duel.lastEvent.timestamp > lastSeenEventTimestamp
+                val wasOwnHit = duel?.lastEvent?.byPlayerId == myPlayerId &&
+                    duel.lastEvent.type == GameConstants.EVENT_HIT &&
+                    duel.lastEvent.timestamp > lastSeenEventTimestamp
                 val fireBlockedUntilMs = duel?.players
                     ?.get(myPlayerId)
                     ?.lastFireAt
@@ -225,15 +228,21 @@ class DuelViewModel(
                     it.copy(
                         currentDuel = duel,
                         screenState = screen,
-                        statusMessage = if (wasHit) "YOU WERE HIT" else message,
+                        statusMessage = when {
+                            duel?.status == GameConstants.STATUS_FINISHED -> message
+                            wasHit -> "YOU WERE HIT"
+                            wasOwnHit -> "HIT"
+                            else -> message
+                        },
                         isLoading = false,
                         errorMessage = null,
                         hitFlash = wasHit,
-                        lastDamageText = if (wasHit) "-25 HP" else it.lastDamageText,
+                        lastDamageText = if (wasHit || wasOwnHit) "-25 HP" else it.lastDamageText,
                         fireBlockedUntilMs = fireBlockedUntilMs
                     )
                 }
                 if (wasHit) clearHitEffectsSoon()
+                if (wasOwnHit) clearDamageTextSoon()
                 if (fireBlockedUntilMs > 0L) scheduleReadyAfterCooldown(fireBlockedUntilMs)
             }
         }
@@ -368,7 +377,18 @@ class DuelViewModel(
             delay(260L)
             _uiState.update { it.copy(hitFlash = false) }
             delay(740L)
-            _uiState.update { it.copy(lastDamageText = null) }
+            _uiState.update {
+                val shouldResetHitStatus = it.statusMessage == "YOU WERE HIT" &&
+                    it.currentDuel?.status == GameConstants.STATUS_ACTIVE
+                it.copy(
+                    lastDamageText = null,
+                    statusMessage = if (shouldResetHitStatus) {
+                        statusFor(it.currentDuel, it.myPlayerId)
+                    } else {
+                        it.statusMessage
+                    }
+                )
+            }
         }
     }
 
