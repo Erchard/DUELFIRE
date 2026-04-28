@@ -33,7 +33,8 @@ data class DuelUiState(
     val isLoading: Boolean = false,
     val isDemoMode: Boolean = false,
     val lastDamageText: String? = null,
-    val hitFlash: Boolean = false
+    val hitFlash: Boolean = false,
+    val fireBlockedUntilMs: Long = 0L
 )
 
 class DuelViewModel(
@@ -125,13 +126,24 @@ class DuelViewModel(
         viewModelScope.launch {
             repository.fire(code, myPlayerId)
                 .onSuccess {
-                    _uiState.update { it.copy(statusMessage = "HIT", lastDamageText = "-25 HP") }
+                    _uiState.update {
+                        it.copy(
+                            statusMessage = "HIT",
+                            lastDamageText = "-25 HP",
+                            fireBlockedUntilMs = System.currentTimeMillis() + GameConstants.FIRE_COOLDOWN_MS
+                        )
+                    }
                     clearDamageTextSoon()
                     scheduleReadyAfterCooldown()
                 }
                 .onFailure {
                     val message = if (isOnCooldown()) "COOLDOWN" else "WAITING"
-                    _uiState.update { it.copy(statusMessage = message) }
+                    _uiState.update {
+                        it.copy(
+                            statusMessage = message,
+                            fireBlockedUntilMs = if (message == "COOLDOWN") cooldownUntilMs() else it.fireBlockedUntilMs
+                        )
+                    }
                     if (message == "COOLDOWN") scheduleReadyAfterCooldown()
                 }
         }
@@ -201,6 +213,12 @@ class DuelViewModel(
                 val message = statusFor(duel, myPlayerId)
                 val wasHit = duel?.lastEvent?.targetPlayerId == myPlayerId &&
                     duel.lastEvent.timestamp > lastSeenEventTimestamp
+                val fireBlockedUntilMs = duel?.players
+                    ?.get(myPlayerId)
+                    ?.lastFireAt
+                    ?.plus(GameConstants.FIRE_COOLDOWN_MS)
+                    ?.takeIf { it > System.currentTimeMillis() }
+                    ?: 0L
                 lastSeenEventTimestamp = maxOf(lastSeenEventTimestamp, duel?.lastEvent?.timestamp ?: 0L)
 
                 _uiState.update {
@@ -211,10 +229,12 @@ class DuelViewModel(
                         isLoading = false,
                         errorMessage = null,
                         hitFlash = wasHit,
-                        lastDamageText = if (wasHit) "-25 HP" else it.lastDamageText
+                        lastDamageText = if (wasHit) "-25 HP" else it.lastDamageText,
+                        fireBlockedUntilMs = fireBlockedUntilMs
                     )
                 }
                 if (wasHit) clearHitEffectsSoon()
+                if (fireBlockedUntilMs > 0L) scheduleReadyAfterCooldown(fireBlockedUntilMs)
             }
         }
     }
@@ -226,8 +246,13 @@ class DuelViewModel(
         val enemy = duel.players[GameConstants.PLAYER_2] ?: return
         val now = System.currentTimeMillis()
         if (duel.status != GameConstants.STATUS_ACTIVE || now - me.lastFireAt < GameConstants.FIRE_COOLDOWN_MS) {
-            _uiState.update { it.copy(statusMessage = "COOLDOWN") }
-            scheduleReadyAfterCooldown()
+            _uiState.update {
+                it.copy(
+                    statusMessage = "COOLDOWN",
+                    fireBlockedUntilMs = me.lastFireAt + GameConstants.FIRE_COOLDOWN_MS
+                )
+            }
+            scheduleReadyAfterCooldown(me.lastFireAt + GameConstants.FIRE_COOLDOWN_MS)
             return
         }
 
@@ -249,9 +274,16 @@ class DuelViewModel(
                 timestamp = now
             )
         )
-        _uiState.update { it.copy(currentDuel = updated, statusMessage = statusFor(updated, it.myPlayerId), lastDamageText = "-25 HP") }
+        _uiState.update {
+            it.copy(
+                currentDuel = updated,
+                statusMessage = if (finished) statusFor(updated, it.myPlayerId) else "HIT",
+                lastDamageText = "-25 HP",
+                fireBlockedUntilMs = if (finished) 0L else now + GameConstants.FIRE_COOLDOWN_MS
+            )
+        }
         clearDamageTextSoon()
-        scheduleReadyAfterCooldown()
+        if (!finished) scheduleReadyAfterCooldown(now + GameConstants.FIRE_COOLDOWN_MS)
     }
 
     private fun demoEnemyFire() {
@@ -312,6 +344,14 @@ class DuelViewModel(
         return System.currentTimeMillis() - me.lastFireAt < GameConstants.FIRE_COOLDOWN_MS
     }
 
+    private fun cooldownUntilMs(
+        duel: Duel? = uiState.value.currentDuel,
+        myPlayerId: String = uiState.value.myPlayerId
+    ): Long {
+        val lastFireAt = duel?.players?.get(myPlayerId)?.lastFireAt ?: return 0L
+        return (lastFireAt + GameConstants.FIRE_COOLDOWN_MS).takeIf { it > System.currentTimeMillis() } ?: 0L
+    }
+
     private fun showError(message: String) {
         _uiState.update { it.copy(errorMessage = message, statusMessage = "ERROR", isLoading = false) }
     }
@@ -332,15 +372,18 @@ class DuelViewModel(
         }
     }
 
-    private fun scheduleReadyAfterCooldown() {
+    private fun scheduleReadyAfterCooldown(untilMs: Long = uiState.value.fireBlockedUntilMs) {
         cooldownJob?.cancel()
         cooldownJob = viewModelScope.launch {
-            delay(GameConstants.FIRE_COOLDOWN_MS)
+            delay(maxOf(0L, untilMs - System.currentTimeMillis()))
             _uiState.update {
                 if (it.currentDuel?.status == GameConstants.STATUS_ACTIVE) {
-                    it.copy(statusMessage = statusFor(it.currentDuel, it.myPlayerId))
+                    it.copy(
+                        statusMessage = statusFor(it.currentDuel, it.myPlayerId),
+                        fireBlockedUntilMs = 0L
+                    )
                 } else {
-                    it
+                    it.copy(fireBlockedUntilMs = 0L)
                 }
             }
         }

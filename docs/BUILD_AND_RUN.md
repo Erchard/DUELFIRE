@@ -40,6 +40,19 @@ Helper scripts:
 .\scripts\install-debug.ps1
 ```
 
+If PowerShell script execution is blocked, use the `.cmd` wrappers:
+
+```bat
+scripts\build-debug.cmd
+scripts\install-debug.cmd
+```
+
+If Android rejects an incremental APK with a certificate/digest parse error, rebuild from clean:
+
+```bat
+scripts\clean-build-debug.cmd
+```
+
 ## Firebase File
 
 Add:
@@ -62,6 +75,12 @@ On this machine, prefer:
 
 ```powershell
 .\scripts\build-debug.ps1
+```
+
+or:
+
+```bat
+scripts\build-debug.cmd
 ```
 
 If Gradle Wrapper is added:
@@ -101,6 +120,12 @@ On this machine, prefer:
 
 ```powershell
 .\scripts\install-debug.ps1
+```
+
+or:
+
+```bat
+scripts\install-debug.cmd
 ```
 
 ## Two Phone Demo Setup

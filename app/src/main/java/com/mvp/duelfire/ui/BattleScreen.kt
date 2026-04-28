@@ -48,9 +48,11 @@ fun BattleScreen(
     }
     val enemy = duel?.players?.get(enemyPlayerId)
     val finished = duel?.status == GameConstants.STATUS_FINISHED
+    val cooldownRemainingMs = maxOf(0L, state.fireBlockedUntilMs - System.currentTimeMillis())
     val fireEnabled = duel?.status == GameConstants.STATUS_ACTIVE &&
         myPlayer?.alive == true &&
-        enemy?.alive == true
+        enemy?.alive == true &&
+        cooldownRemainingMs == 0L
 
     val background by animateColorAsState(
         targetValue = if (state.hitFlash) Color(0xFF3A1010) else Color(0xFF101014),
@@ -98,6 +100,15 @@ fun BattleScreen(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
+                if (cooldownRemainingMs > 0L && !finished) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Cooldown: ${((cooldownRemainingMs + 999L) / 1000L)}s",
+                        color = Color(0xFFFBBF24),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
                 state.lastDamageText?.let {
                     Spacer(Modifier.height(8.dp))
                     Text(it, color = Color(0xFFFFD166), fontSize = 22.sp, fontWeight = FontWeight.Black)

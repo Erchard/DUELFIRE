@@ -8,12 +8,13 @@ Start here if you are opening the project for the first time.
 2. [Product specification](SPECIFICATION.md)
 3. [TODO list](../TODO.md)
 4. [Build and run](BUILD_AND_RUN.md)
-5. [Firebase setup](FIREBASE.md)
-6. [Test plan](TEST_PLAN.md)
-7. [Architecture](ARCHITECTURE.md)
-8. [Camera Aim Assist specification](CAMERA_AIM_ASSIST_SPEC.md)
-9. [Solo AR Demo specification](SOLO_AR_DEMO_SPEC.md)
-10. [Investor demo script](DEMO_SCRIPT.md)
+5. [Technical debt](TECH_DEBT.md)
+6. [Firebase setup](FIREBASE.md)
+7. [Test plan](TEST_PLAN.md)
+8. [Architecture](ARCHITECTURE.md)
+9. [Camera Aim Assist specification](CAMERA_AIM_ASSIST_SPEC.md)
+10. [Solo AR Demo specification](SOLO_AR_DEMO_SPEC.md)
+11. [Investor demo script](DEMO_SCRIPT.md)
 
 ## What Each File Is For
 
@@ -23,6 +24,7 @@ Start here if you are opening the project for the first time.
 | `SPECIFICATION.md` | Current Version 0.1 requirements and acceptance criteria. |
 | `../TODO.md` | Practical task list ordered by priority. |
 | `BUILD_AND_RUN.md` | How to build APK and install it on Android phones. |
+| `TECH_DEBT.md` | Current blockers, accepted tradeoffs, and future debt. |
 | `FIREBASE.md` | Firebase setup, rules, and database structure. |
 | `TEST_PLAN.md` | Manual checks for Demo Mode, Firebase duel, cooldown, and result states. |
 | `ARCHITECTURE.md` | Code structure, state flow, and future camera module boundaries. |

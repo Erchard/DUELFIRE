@@ -15,6 +15,9 @@ Implemented in the codebase:
 - Kotlin Android app.
 - Jetpack Compose UI.
 - Firebase Realtime Database repository.
+- Lightweight Android build scripts.
+- Verified debug APK build.
+- Verified install and launch on Redmi Note 7.
 - Start / Waiting / Battle screens.
 - Create Duel / Join Duel / Start Battle.
 - FIRE action with cooldown.
@@ -25,7 +28,6 @@ Implemented in the codebase:
 
 Not yet implemented:
 
-- real APK build verification on this machine;
 - real two-phone Firebase test;
 - Solo AR Demo;
 - CameraX battle screen;
@@ -40,6 +42,7 @@ Not yet implemented:
 - [Architecture](docs/ARCHITECTURE.md)
 - [Firebase setup](docs/FIREBASE.md)
 - [Build and run](docs/BUILD_AND_RUN.md)
+- [Technical debt](docs/TECH_DEBT.md)
 - [Test plan](docs/TEST_PLAN.md)
 - [Camera Aim Assist specification](docs/CAMERA_AIM_ASSIST_SPEC.md)
 - [Solo AR Demo specification](docs/SOLO_AR_DEMO_SPEC.md)

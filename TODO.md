@@ -6,9 +6,10 @@ This list is ordered by investor-demo priority.
 
 - [x] Install or configure local JDK 17.
 - [x] Install or configure Android SDK.
-- [ ] Add or generate Gradle wrapper files.
+- [x] Add or generate Gradle wrapper files.
 - [ ] Add real `app/google-services.json`.
 - [x] Run `gradle assembleDebug`.
+- [x] Run `gradlew.bat assembleDebug`.
 - [x] Fix any compile errors from the first real Android build.
 - [x] Produce `app/build/outputs/apk/debug/app-debug.apk`.
 
@@ -19,6 +20,7 @@ This list is ordered by investor-demo priority.
 - [x] Confirm `adb devices` shows the phone as `device`.
 - [x] Install debug APK with `adb install -r`.
 - [x] Open app.
+- [x] Verify app process starts without crash after install.
 - [ ] Test Start Screen.
 - [ ] Test Demo Mode.
 - [ ] Verify FIRE reduces fake enemy HP.
@@ -49,6 +51,7 @@ This list is ordered by investor-demo priority.
 - [ ] Improve error messages for Firebase unavailable / no internet.
 - [ ] Show clear "Firebase not configured" state when `google-services.json` is missing.
 - [ ] Add a visible cooldown timer.
+- [x] Disable FIRE during cooldown.
 - [ ] Add stronger hit flash animation.
 - [ ] Add simple sound effect for FIRE.
 - [ ] Add "Copy duel code" if useful.
@@ -57,6 +60,7 @@ This list is ordered by investor-demo priority.
 
 ## P1: Safety And Stability
 
+- [x] Document current technical debt and accepted MVP tradeoffs.
 - [ ] Add simple repository tests for game rules.
 - [ ] Add transaction-specific tests or manual race-condition checklist.
 - [ ] Prevent joining with invalid code length.
