@@ -4,6 +4,7 @@ This file separates real MVP blockers from future product work.
 
 ## Resolved
 
+- Atomic duel creation (Firebase transaction); Exit calls `cancelDuel` (`removeValue`); more reliable Firebase repo selection; shared shot rules in `DuelRules`; clearer join/start errors; observe handles missing duel and listener cancel without crashing.
 - Lightweight Android toolchain installed on `D:\AndroidTools`.
 - Debug APK builds successfully.
 - Debug APK installs on Redmi Note 7.

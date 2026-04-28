@@ -37,12 +37,11 @@ class MainActivity : ComponentActivity() {
 
     private fun createRepository(): DuelRepository {
         return try {
-            if (FirebaseApp.initializeApp(this) == null) {
-                OfflineDuelRepository()
-            } else {
-                FirebaseDuelRepository()
+            if (FirebaseApp.getApps(this).isEmpty()) {
+                FirebaseApp.initializeApp(this)
             }
-        } catch (_: IllegalStateException) {
+            FirebaseDuelRepository()
+        } catch (_: Exception) {
             OfflineDuelRepository()
         }
     }

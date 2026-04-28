@@ -21,9 +21,11 @@ data/
   DuelRepository
   FirebaseDuelRepository
   OfflineDuelRepository
+  DuelRepositoryErrors
 
 domain/
   DuelModels
+  DuelRules
   GameConstants
 
 util/
@@ -66,7 +68,7 @@ app/src/main/java/com/mvp/duelfire/MainActivity.kt
 
 Responsibilities:
 
-- initialize Firebase repository when Firebase config exists;
+- initialize Firebase via `FirebaseApp.getApps` / `initializeApp` and use `FirebaseDuelRepository` when available;
 - fall back to `OfflineDuelRepository` if Firebase is unavailable;
 - create `DuelViewModel`;
 - render the active Compose screen.
@@ -81,7 +83,7 @@ Responsibilities:
 - start battle;
 - fire;
 - reset duel;
-- exit duel;
+- exit duel (calls `cancelDuel` — removes the RTDB node for the current code, except in demo);
 - run Demo Mode;
 - observe Firebase updates;
 - derive UI status messages.
@@ -104,14 +106,19 @@ suspend fun cancelDuel(code: String): Result<Unit>
 
 Responsibilities:
 
-- create `/duels/{code}`;
+- create `/duels/{code}` atomically (transaction);
 - join as `player2`;
 - set duel `active`;
-- apply FIRE transaction;
+- apply FIRE transaction (shot logic shared with demo via `DuelRules`);
 - reset duel;
-- stream updates.
+- remove `/duels/{code}` on `cancelDuel`;
+- stream updates (missing data / listener cancel — no crash; see `FIREBASE.md`).
 
 The `fire` action uses a Firebase transaction to reduce race-condition risk.
+
+### `DuelRules`
+
+Pure battle rules (shot, damage, win). Used by both `FirebaseDuelRepository.fire` and demo mode in `DuelViewModel` so balance does not drift across duplicate logic.
 
 ### `OfflineDuelRepository`
 

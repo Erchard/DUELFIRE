@@ -23,7 +23,7 @@ Implemented in the codebase:
 - FIRE action with cooldown.
 - HP synchronization model.
 - Victory / Defeat state.
-- Reset / Exit actions.
+- Reset / Exit actions (Exit removes the current duel session from Firebase).
 - One-phone Demo Mode.
 
 Not yet implemented:

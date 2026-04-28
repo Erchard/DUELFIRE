@@ -5,6 +5,9 @@ object GameConstants {
     const val DAMAGE_PER_SHOT = 25
     const val FIRE_COOLDOWN_MS = 2000L
 
+    /** UI text after a hit (kept in sync with [DAMAGE_PER_SHOT]). */
+    val DAMAGE_SUMMARY: String get() = "-$DAMAGE_PER_SHOT HP"
+
     const val STATUS_WAITING = "waiting"
     const val STATUS_ACTIVE = "active"
     const val STATUS_FINISHED = "finished"

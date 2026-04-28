@@ -2,9 +2,14 @@ package com.mvp.duelfire.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mvp.duelfire.data.DuelAlreadyStartedException
+import com.mvp.duelfire.data.DuelFullException
+import com.mvp.duelfire.data.DuelJoinRaceException
+import com.mvp.duelfire.data.DuelNotFoundException
 import com.mvp.duelfire.data.DuelRepository
+import com.mvp.duelfire.data.DuelStartNeedsOpponentException
 import com.mvp.duelfire.domain.Duel
-import com.mvp.duelfire.domain.DuelEvent
+import com.mvp.duelfire.domain.DuelRules
 import com.mvp.duelfire.domain.GameConstants
 import com.mvp.duelfire.domain.Player
 import kotlinx.coroutines.Job
@@ -99,7 +104,17 @@ class DuelViewModel(
                     }
                     observeDuel(cleanCode)
                 }
-                .onFailure { showError("Duel not found, full, or already started.") }
+                .onFailure { e ->
+                    showError(
+                        when (e) {
+                            is DuelNotFoundException -> e.message ?: "Duel not found."
+                            is DuelFullException -> e.message ?: "This duel already has two players."
+                            is DuelAlreadyStartedException -> e.message ?: "This duel has already started."
+                            is DuelJoinRaceException -> e.message ?: "Could not join. Please try again."
+                            else -> e.message ?: "Could not join duel."
+                        }
+                    )
+                }
         }
     }
 
@@ -108,7 +123,18 @@ class DuelViewModel(
         if (code.isBlank()) return
         viewModelScope.launch {
             repository.startBattle(code)
-                .onFailure { showError("Start is available only when both players are connected.") }
+                .onFailure { e ->
+                    showError(
+                        when (e) {
+                            is DuelNotFoundException -> e.message ?: "Duel not found."
+                            is DuelStartNeedsOpponentException ->
+                                e.message ?: "Start battle only when both players are connected."
+                            is DuelAlreadyStartedException -> e.message ?: "This duel has already started."
+                            is DuelJoinRaceException -> e.message ?: "Try again."
+                            else -> e.message ?: "Could not start battle."
+                        }
+                    )
+                }
         }
     }
 
@@ -129,7 +155,7 @@ class DuelViewModel(
                     _uiState.update {
                         it.copy(
                             statusMessage = "HIT",
-                            lastDamageText = "-25 HP",
+                            lastDamageText = GameConstants.DAMAGE_SUMMARY,
                             fireBlockedUntilMs = System.currentTimeMillis() + GameConstants.FIRE_COOLDOWN_MS
                         )
                     }
@@ -164,10 +190,18 @@ class DuelViewModel(
     }
 
     fun exitDuel() {
+        val snap = _uiState.value
+        val code = snap.duelCode
+        val demo = snap.isDemoMode
         observeJob?.cancel()
         demoEnemyJob?.cancel()
         cooldownJob?.cancel()
-        _uiState.value = DuelUiState(playerName = uiState.value.playerName)
+        if (!demo && code.isNotBlank() && code != "DEMO") {
+            viewModelScope.launch {
+                repository.cancelDuel(code)
+            }
+        }
+        _uiState.value = DuelUiState(playerName = snap.playerName)
     }
 
     fun startDemoMode() {
@@ -203,8 +237,20 @@ class DuelViewModel(
 
     private fun observeDuel(code: String) {
         observeJob?.cancel()
+        lastSeenEventTimestamp = 0L
         observeJob = viewModelScope.launch {
             repository.observeDuel(code).collect { duel ->
+                if (duel == null) {
+                    _uiState.update { prev ->
+                        DuelUiState(
+                            playerName = prev.playerName,
+                            statusMessage = "READY",
+                            errorMessage = "Duel ended or connection lost."
+                        )
+                    }
+                    observeJob?.cancel()
+                    return@collect
+                }
                 val myPlayerId = uiState.value.myPlayerId
                 val screen = when (duel?.status) {
                     GameConstants.STATUS_ACTIVE, GameConstants.STATUS_FINISHED -> ScreenState.Battle
@@ -237,7 +283,7 @@ class DuelViewModel(
                         isLoading = false,
                         errorMessage = null,
                         hitFlash = wasHit,
-                        lastDamageText = if (wasHit || wasOwnHit) "-25 HP" else it.lastDamageText,
+                        lastDamageText = if (wasHit || wasOwnHit) GameConstants.DAMAGE_SUMMARY else it.lastDamageText,
                         fireBlockedUntilMs = fireBlockedUntilMs
                     )
                 }
@@ -252,9 +298,9 @@ class DuelViewModel(
         val state = uiState.value
         val duel = state.currentDuel ?: return
         val me = duel.players[GameConstants.PLAYER_1] ?: return
-        val enemy = duel.players[GameConstants.PLAYER_2] ?: return
         val now = System.currentTimeMillis()
-        if (duel.status != GameConstants.STATUS_ACTIVE || now - me.lastFireAt < GameConstants.FIRE_COOLDOWN_MS) {
+        val updated = DuelRules.resolvePlayerFire(duel, GameConstants.PLAYER_1, now)
+        if (updated == null) {
             _uiState.update {
                 it.copy(
                     statusMessage = "COOLDOWN",
@@ -264,30 +310,12 @@ class DuelViewModel(
             scheduleReadyAfterCooldown(me.lastFireAt + GameConstants.FIRE_COOLDOWN_MS)
             return
         }
-
-        val newHp = maxOf(0, enemy.hp - GameConstants.DAMAGE_PER_SHOT)
-        val finished = newHp == 0
-        val updated = duel.copy(
-            status = if (finished) GameConstants.STATUS_FINISHED else GameConstants.STATUS_ACTIVE,
-            winnerPlayerId = if (finished) GameConstants.PLAYER_1 else null,
-            updatedAt = now,
-            players = duel.players + mapOf(
-                GameConstants.PLAYER_1 to me.copy(lastFireAt = now),
-                GameConstants.PLAYER_2 to enemy.copy(hp = newHp, alive = !finished)
-            ),
-            lastEvent = DuelEvent(
-                type = if (finished) GameConstants.EVENT_VICTORY else GameConstants.EVENT_HIT,
-                byPlayerId = GameConstants.PLAYER_1,
-                targetPlayerId = GameConstants.PLAYER_2,
-                damage = GameConstants.DAMAGE_PER_SHOT,
-                timestamp = now
-            )
-        )
+        val finished = updated.status == GameConstants.STATUS_FINISHED
         _uiState.update {
             it.copy(
                 currentDuel = updated,
                 statusMessage = if (finished) statusFor(updated, it.myPlayerId) else "HIT",
-                lastDamageText = "-25 HP",
+                lastDamageText = GameConstants.DAMAGE_SUMMARY,
                 fireBlockedUntilMs = if (finished) 0L else now + GameConstants.FIRE_COOLDOWN_MS
             )
         }
@@ -304,30 +332,14 @@ class DuelViewModel(
         val enemy = duel.players[GameConstants.PLAYER_2] ?: return
         if (!me.alive || !enemy.alive) return
         val now = System.currentTimeMillis()
-        val newHp = maxOf(0, me.hp - GameConstants.DAMAGE_PER_SHOT)
-        val finished = newHp == 0
-        val updated = duel.copy(
-            status = if (finished) GameConstants.STATUS_FINISHED else GameConstants.STATUS_ACTIVE,
-            winnerPlayerId = if (finished) GameConstants.PLAYER_2 else null,
-            updatedAt = now,
-            players = duel.players + mapOf(
-                GameConstants.PLAYER_1 to me.copy(hp = newHp, alive = !finished),
-                GameConstants.PLAYER_2 to enemy.copy(lastFireAt = now)
-            ),
-            lastEvent = DuelEvent(
-                type = if (finished) GameConstants.EVENT_VICTORY else GameConstants.EVENT_HIT,
-                byPlayerId = GameConstants.PLAYER_2,
-                targetPlayerId = GameConstants.PLAYER_1,
-                damage = GameConstants.DAMAGE_PER_SHOT,
-                timestamp = now
-            )
-        )
+        val updated = DuelRules.resolvePlayerFire(duel, GameConstants.PLAYER_2, now) ?: return
+        val finished = updated.status == GameConstants.STATUS_FINISHED
         _uiState.update {
             it.copy(
                 currentDuel = updated,
                 statusMessage = if (finished) statusFor(updated, it.myPlayerId) else "YOU WERE HIT",
                 hitFlash = true,
-                lastDamageText = "-25 HP"
+                lastDamageText = GameConstants.DAMAGE_SUMMARY
             )
         }
         clearHitEffectsSoon()

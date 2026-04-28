@@ -1,5 +1,6 @@
 package com.mvp.duelfire.data
 
+import android.util.Log
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.MutableData
@@ -9,6 +10,7 @@ import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
 import com.mvp.duelfire.domain.Duel
 import com.mvp.duelfire.domain.DuelEvent
+import com.mvp.duelfire.domain.DuelRules
 import com.mvp.duelfire.domain.GameConstants
 import com.mvp.duelfire.domain.Player
 import com.mvp.duelfire.util.CodeGenerator
@@ -26,23 +28,7 @@ class FirebaseDuelRepository : DuelRepository {
         val cleanName = playerName.ifBlank { "Player 1" }
         repeat(20) {
             val code = CodeGenerator.fourDigitCode()
-            val ref = duels.child(code)
-            if (!ref.get().await().exists()) {
-                val now = System.currentTimeMillis()
-                ref.setValue(
-                    Duel(
-                        duelCode = code,
-                        status = GameConstants.STATUS_WAITING,
-                        createdAt = now,
-                        updatedAt = now,
-                        players = mapOf(
-                            GameConstants.PLAYER_1 to Player(
-                                id = GameConstants.PLAYER_1,
-                                name = cleanName
-                            )
-                        )
-                    )
-                ).await()
+            if (tryCreateDuelAtomically(code, cleanName)) {
                 return@runCatching code
             }
         }
@@ -50,8 +36,9 @@ class FirebaseDuelRepository : DuelRepository {
     }
 
     override suspend fun joinDuel(code: String, playerName: String): Result<Unit> {
+        val c = code.trim()
         val cleanName = playerName.ifBlank { "Player 2" }
-        return runDuelTransaction(code.trim()) { duel ->
+        val tx = runDuelTransaction(c) { duel ->
             if (duel == null) return@runDuelTransaction null
             if (duel.status != GameConstants.STATUS_WAITING) return@runDuelTransaction null
             if (duel.players.containsKey(GameConstants.PLAYER_2)) return@runDuelTransaction null
@@ -66,10 +53,33 @@ class FirebaseDuelRepository : DuelRepository {
                 )
             )
         }
+        if (tx.isSuccess) return tx
+
+        return try {
+            val snap = duels.child(c).get().await()
+            if (!snap.exists()) {
+                Result.failure(DuelNotFoundException())
+            } else {
+                val duel = snap.getValue(Duel::class.java)
+                if (duel == null) Result.failure(DuelNotFoundException())
+                else classifyJoinFailure(duel)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    private fun classifyJoinFailure(duel: Duel): Result<Unit> = when {
+        duel.status != GameConstants.STATUS_WAITING ->
+            Result.failure(DuelAlreadyStartedException())
+        duel.players.containsKey(GameConstants.PLAYER_2) ->
+            Result.failure(DuelFullException())
+        else -> Result.failure(DuelJoinRaceException())
     }
 
     override suspend fun startBattle(code: String): Result<Unit> {
-        return runDuelTransaction(code.trim()) { duel ->
+        val c = code.trim()
+        val tx = runDuelTransaction(c) { duel ->
             if (duel == null) return@runDuelTransaction null
             val hasBothPlayers = duel.players.containsKey(GameConstants.PLAYER_1) &&
                 duel.players.containsKey(GameConstants.PLAYER_2)
@@ -82,46 +92,38 @@ class FirebaseDuelRepository : DuelRepository {
                 updatedAt = System.currentTimeMillis()
             )
         }
+        if (tx.isSuccess) return tx
+
+        return try {
+            val snap = duels.child(c).get().await()
+            if (!snap.exists()) {
+                Result.failure(DuelNotFoundException())
+            } else {
+                val duel = snap.getValue(Duel::class.java)
+                if (duel == null) Result.failure(DuelNotFoundException())
+                else classifyStartFailure(duel)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    private fun classifyStartFailure(duel: Duel): Result<Unit> {
+        val hasBoth = duel.players.containsKey(GameConstants.PLAYER_1) &&
+            duel.players.containsKey(GameConstants.PLAYER_2)
+        return when {
+            !hasBoth -> Result.failure(DuelStartNeedsOpponentException())
+            duel.status != GameConstants.STATUS_WAITING ->
+                Result.failure(DuelAlreadyStartedException())
+            else -> Result.failure(DuelJoinRaceException())
+        }
     }
 
     override suspend fun fire(code: String, myPlayerId: String): Result<Unit> {
+        val now = System.currentTimeMillis()
         return runDuelTransaction(code.trim()) { duel ->
             if (duel == null) return@runDuelTransaction null
-            val enemyPlayerId = enemyOf(myPlayerId)
-            val me = duel.players[myPlayerId] ?: return@runDuelTransaction null
-            val enemy = duel.players[enemyPlayerId] ?: return@runDuelTransaction null
-            val now = System.currentTimeMillis()
-
-            if (
-                duel.status != GameConstants.STATUS_ACTIVE ||
-                !me.alive ||
-                !enemy.alive ||
-                now - me.lastFireAt < GameConstants.FIRE_COOLDOWN_MS ||
-                enemy.hp <= 0
-            ) {
-                return@runDuelTransaction null
-            }
-
-            val newEnemyHp = maxOf(0, enemy.hp - GameConstants.DAMAGE_PER_SHOT)
-            val finished = newEnemyHp == 0
-            val updatedPlayers = duel.players.toMutableMap().apply {
-                put(myPlayerId, me.copy(lastFireAt = now))
-                put(enemyPlayerId, enemy.copy(hp = newEnemyHp, alive = !finished))
-            }
-
-            duel.copy(
-                status = if (finished) GameConstants.STATUS_FINISHED else duel.status,
-                updatedAt = now,
-                winnerPlayerId = if (finished) myPlayerId else duel.winnerPlayerId,
-                players = updatedPlayers,
-                lastEvent = DuelEvent(
-                    type = if (finished) GameConstants.EVENT_VICTORY else GameConstants.EVENT_HIT,
-                    byPlayerId = myPlayerId,
-                    targetPlayerId = enemyPlayerId,
-                    damage = GameConstants.DAMAGE_PER_SHOT,
-                    timestamp = now
-                )
-            )
+            DuelRules.resolvePlayerFire(duel, myPlayerId, now)
         }
     }
 
@@ -129,11 +131,17 @@ class FirebaseDuelRepository : DuelRepository {
         val ref = duels.child(code.trim())
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
+                if (!snapshot.exists()) {
+                    trySend(null)
+                    return
+                }
                 trySend(snapshot.getValue(Duel::class.java))
             }
 
             override fun onCancelled(error: DatabaseError) {
-                close(error.toException())
+                Log.w(TAG, "observeDuel cancelled: ${error.message}")
+                trySend(null)
+                close()
             }
         }
         ref.addValueEventListener(listener)
@@ -164,8 +172,40 @@ class FirebaseDuelRepository : DuelRepository {
     }
 
     override suspend fun cancelDuel(code: String): Result<Unit> = runCatching {
-        duels.child(code.trim()).child("status").setValue(GameConstants.STATUS_CANCELLED).await()
+        duels.child(code.trim()).removeValue().await()
     }
+
+    private suspend fun tryCreateDuelAtomically(code: String, cleanName: String): Boolean =
+        suspendCoroutine { continuation ->
+            duels.child(code).runTransaction(object : Transaction.Handler {
+                override fun doTransaction(currentData: MutableData): Transaction.Result {
+                    if (currentData.getValue(Duel::class.java) != null) {
+                        return Transaction.abort()
+                    }
+                    val now = System.currentTimeMillis()
+                    currentData.value = Duel(
+                        duelCode = code,
+                        status = GameConstants.STATUS_WAITING,
+                        createdAt = now,
+                        updatedAt = now,
+                        players = mapOf(
+                            GameConstants.PLAYER_1 to Player(
+                                id = GameConstants.PLAYER_1,
+                                name = cleanName
+                            )
+                        )
+                    )
+                    return Transaction.success(currentData)
+                }
+
+                override fun onComplete(error: DatabaseError?, committed: Boolean, snapshot: DataSnapshot?) {
+                    when {
+                        error != null -> continuation.resume(false)
+                        else -> continuation.resume(committed)
+                    }
+                }
+            })
+        }
 
     private suspend fun runDuelTransaction(
         code: String,
@@ -189,7 +229,7 @@ class FirebaseDuelRepository : DuelRepository {
         })
     }
 
-    private fun enemyOf(playerId: String): String {
-        return if (playerId == GameConstants.PLAYER_1) GameConstants.PLAYER_2 else GameConstants.PLAYER_1
+    private companion object {
+        private const val TAG = "FirebaseDuelRepo"
     }
 }
