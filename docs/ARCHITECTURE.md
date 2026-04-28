@@ -153,3 +153,20 @@ camera/
 ```
 
 Do not mix CameraX / ML Kit code into `FirebaseDuelRepository`. The camera layer should compute a local shot result, then call repository fire logic with fixed or variable damage.
+
+Solo AR Demo should be a separate local feature slice:
+
+```text
+ui/ar/
+  SoloArScreen
+  ArHudOverlay
+  CrosshairOverlay
+
+ar/
+  ArAvailabilityChecker
+  SoloArGameController
+  ArHitCalculator
+  EnemyNodeFactory
+```
+
+It should not depend on Firebase. It can reuse visual concepts from Battle Screen, but its game state should remain local.

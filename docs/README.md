@@ -12,7 +12,8 @@ Start here if you are opening the project for the first time.
 6. [Test plan](TEST_PLAN.md)
 7. [Architecture](ARCHITECTURE.md)
 8. [Camera Aim Assist specification](CAMERA_AIM_ASSIST_SPEC.md)
-9. [Investor demo script](DEMO_SCRIPT.md)
+9. [Solo AR Demo specification](SOLO_AR_DEMO_SPEC.md)
+10. [Investor demo script](DEMO_SCRIPT.md)
 
 ## What Each File Is For
 
@@ -26,6 +27,7 @@ Start here if you are opening the project for the first time.
 | `TEST_PLAN.md` | Manual checks for Demo Mode, Firebase duel, cooldown, and result states. |
 | `ARCHITECTURE.md` | Code structure, state flow, and future camera module boundaries. |
 | `CAMERA_AIM_ASSIST_SPEC.md` | CameraX + ML Kit roadmap and accuracy model. |
+| `SOLO_AR_DEMO_SPEC.md` | One-device AR demo with a virtual opponent. |
 | `DEMO_SCRIPT.md` | Step-by-step investor presentation script. |
 
 ## Current Truth

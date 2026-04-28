@@ -75,6 +75,24 @@ This list is ordered by investor-demo priority.
 - [ ] Keep fixed 25 damage while camera is visible.
 - [ ] Add fallback to non-camera battle screen.
 
+## P2: Solo AR Demo 0.2A
+
+- [ ] Add `Solo AR Demo` button on Start Screen.
+- [ ] Confirm ARCore availability on Redmi Note 7.
+- [ ] Add Google Play Services for AR install/update handling.
+- [ ] Add `CAMERA` permission and permission request flow.
+- [ ] Add SceneView or direct ARCore dependency.
+- [ ] Add full-screen AR camera view.
+- [ ] Detect plane or stable tracking.
+- [ ] Place simple virtual enemy in front of player.
+- [ ] Draw center crosshair overlay.
+- [ ] Show player HP and virtual enemy HP.
+- [ ] Implement screen-space hit / miss calculation.
+- [ ] Implement variable damage by aim distance.
+- [ ] Add virtual enemy return fire every 3 seconds.
+- [ ] Show VICTORY / DEFEAT locally.
+- [ ] Fall back to current Demo Mode if AR is unavailable.
+
 ## P2: ML Target Detection 0.3
 
 - [ ] Add ML Kit Pose Detection dependency.

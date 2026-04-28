@@ -18,6 +18,7 @@ Needed:
 Fallback:
 
 - one Android phone with Demo Mode.
+- one Android phone with Solo AR Demo once implemented.
 
 ## Two-Phone Demo
 
@@ -128,11 +129,30 @@ Say:
 Demo Mode is the offline fallback for presentations. The two-phone Firebase mode is the real MVP path.
 ```
 
+## One-Phone Wow Fallback: Solo AR Demo
+
+Once implemented, use this when only one phone is available but the presentation needs stronger visual impact:
+
+- open app;
+- tap `Solo AR Demo`;
+- scan a table or floor;
+- place virtual enemy;
+- aim with center crosshair;
+- tap FIRE;
+- show hit / miss, enemy HP, return fire, and VICTORY / DEFEAT.
+
+Say:
+
+```text
+This is the one-device AR presentation mode. It shows the future feel of Duel Fire even when we do not have a second phone or live Firebase setup.
+```
+
 ## Things Not To Promise Yet
 
 Do not claim these are already implemented:
 
 - camera aiming;
+- Solo AR Demo;
 - person detection;
 - GPS validation;
 - Bluetooth proximity;

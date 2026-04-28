@@ -16,6 +16,8 @@ The immediate goal is a stable proof of concept that can be installed on two And
 
 This is the foundation. The wow layer is Camera Aim Assist.
 
+If only one device is available, the strongest fallback is Solo AR Demo: the app opens the camera, places a virtual opponent in augmented reality, and runs a local duel loop against that opponent.
+
 ## Current Product Scope
 
 Version 0.1 should stay narrow:
@@ -123,6 +125,18 @@ Add camera without ML:
 - show CameraX preview;
 - draw crosshair overlay;
 - keep current Firebase damage logic.
+
+### 0.2A Solo AR Demo
+
+One-device investor fallback:
+
+- ARCore availability check;
+- camera permission;
+- place virtual enemy in AR;
+- crosshair overlay;
+- local hit / miss logic;
+- enemy return fire;
+- VICTORY / DEFEAT without Firebase.
 
 ### 0.3 Pose Detection
 
