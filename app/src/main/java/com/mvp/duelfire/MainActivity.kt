@@ -24,6 +24,7 @@ import com.mvp.duelfire.data.OfflineDuelRepository
 import com.mvp.duelfire.ui.BattleScreen
 import com.mvp.duelfire.ui.DuelViewModel
 import com.mvp.duelfire.ui.ScreenState
+import com.mvp.duelfire.ui.SoloArScreen
 import com.mvp.duelfire.ui.StartScreen
 import com.mvp.duelfire.ui.WaitingScreen
 
@@ -99,7 +100,8 @@ private fun DuelFireApp(repository: DuelRepository) {
                     onCodeChange = viewModel::updateJoinCode,
                     onCreate = { viewModel.createDuel() },
                     onJoin = { viewModel.joinDuel() },
-                    onDemo = viewModel::startDemoMode
+                    onDemo = viewModel::startDemoMode,
+                    onSoloAr = viewModel::startSoloArMode
                 )
 
                 ScreenState.Waiting -> WaitingScreen(
@@ -109,6 +111,13 @@ private fun DuelFireApp(repository: DuelRepository) {
                 )
 
                 ScreenState.Battle -> BattleScreen(
+                    state = state,
+                    onFire = viewModel::fire,
+                    onReset = viewModel::resetDuel,
+                    onExit = viewModel::exitDuel
+                )
+
+                ScreenState.SoloAr -> SoloArScreen(
                     state = state,
                     onFire = viewModel::fire,
                     onReset = viewModel::resetDuel,

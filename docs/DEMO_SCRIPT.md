@@ -113,20 +113,29 @@ Then show the roadmap:
 0.5 QR/marker confirmation
 ```
 
-## One-Phone Fallback Demo
+## One-Phone Demo (target experience)
 
-If Firebase, internet, or the second phone fails:
+What the user should see on a **single device** (once Solo AR is implemented):
+
+- **Camera** fills the view with the real surroundings;
+- **AR** places a **virtual opponent** in the scene;
+- the user **aims** with the phone and **fires** at the opponent;
+- the opponent **returns fire**; HP, cooldown, and **VICTORY / DEFEAT** behave like the online duel, locally.
+
+Details: [Solo AR Demo specification](SOLO_AR_DEMO_SPEC.md).
+
+### Interim: Demo Mode (current build)
+
+If Firebase, internet, the second phone, or AR is unavailable:
 
 - open app;
 - tap `Demo Mode`;
-- fire at fake enemy;
-- wait for fake enemy return shots;
-- show VICTORY / DEFEAT.
+- use the 2D battle screen: fire at the fake enemy, wait for return shots, show VICTORY / DEFEAT.
 
 Say:
 
 ```text
-Demo Mode is the offline fallback for presentations. The two-phone Firebase mode is the real MVP path.
+Demo Mode is the placeholder one-phone flow until Solo AR ships. The two-phone Firebase path is the core MVP sync demo.
 ```
 
 ## One-Phone Wow Fallback: Solo AR Demo

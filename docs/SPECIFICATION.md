@@ -6,6 +6,19 @@ Duel Fire is an investor MVP for a two-player phone duel. It should demonstrate 
 
 The MVP must stay simple. The first version is about proving the core duel loop, not building the final game.
 
+## Target: one-device experience (Solo AR)
+
+For investor and single-phone presentations, the intended experience is **not** only a flat UI:
+
+- the user sees the **real environment through the camera**;
+- **AR** draws a **virtual opponent** in the scene;
+- the user **shoots** at that opponent; the opponent **shoots back**;
+- HP, FIRE cooldown, and end states match the same rules as the Firebase duel, simulated on device.
+
+Canonical technical spec: [Solo AR Demo specification](SOLO_AR_DEMO_SPEC.md).
+
+**Version 0.1:** `Demo Mode` is an interim **2D** battle (no camera/AR) until Solo AR is implemented. It exists so one-phone demos can run before ARCore work is complete.
+
 ## Non Goals For Version 0.1
 
 - No login.

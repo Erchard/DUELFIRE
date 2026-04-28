@@ -31,7 +31,8 @@ fun StartScreen(
     onCodeChange: (String) -> Unit,
     onCreate: () -> Unit,
     onJoin: () -> Unit,
-    onDemo: () -> Unit
+    onDemo: () -> Unit,
+    onSoloAr: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -87,6 +88,14 @@ fun StartScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Demo Mode")
+        }
+        Spacer(Modifier.height(10.dp))
+        OutlinedButton(
+            onClick = onSoloAr,
+            enabled = true,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Solo AR")
         }
         Spacer(Modifier.height(24.dp))
         if (state.isLoading) {

@@ -4,7 +4,7 @@ Duel Fire is a native Android proof of concept for a real-world phone duel. The 
 
 The next product layer is **Camera Aim Assist**: the battle screen becomes a camera view with a crosshair, human target detection, accuracy, and variable damage.
 
-For one-device demos, the strongest fallback is **Solo AR Demo**: the app places a virtual opponent in augmented reality, lets the player aim with the phone, and simulates a full duel locally.
+For one-device demos, the **target** experience is **Solo AR Demo**: the user sees the real world through the camera, an AR layer draws a **virtual opponent** in the scene, the player **fires** at that opponent, and the opponent **fires back** (local HP / cooldown / win-loss loop). Until that ships, **Demo Mode** is a simplified 2D placeholder battle.
 
 ## Project Status
 

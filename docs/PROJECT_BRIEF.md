@@ -16,7 +16,7 @@ The immediate goal is a stable proof of concept that can be installed on two And
 
 This is the foundation. The wow layer is Camera Aim Assist.
 
-If only one device is available, the strongest fallback is Solo AR Demo: the app opens the camera, places a virtual opponent in augmented reality, and runs a local duel loop against that opponent.
+If only one device is available, the product should present **Solo AR Demo**: the user sees the environment **through the camera**, **AR** adds a **virtual opponent** in the world, the user **shoots** at that opponent, and the opponent **shoots back**—same duel loop (HP, cooldown, VICTORY/DEFEAT) simulated locally. Until that is built, **Demo Mode** is the interim one-phone fallback (no camera/AR).
 
 ## Current Product Scope
 

@@ -4,6 +4,14 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// SceneView pulls androidx.core 1.18+ which targets compileSdk 36 / AGP 8.9; keep API 35 toolchain.
+configurations.configureEach {
+    resolutionStrategy {
+        force("androidx.core:core-ktx:1.15.0")
+        force("androidx.core:core:1.15.0")
+    }
+}
+
 // Firebase docs: apply google-services in app plugins {}; we keep apply() only when
 // google-services.json exists so the project still builds without Firebase secrets.
 if (file("google-services.json").exists()) {
@@ -37,6 +45,8 @@ kotlin {
 }
 
 dependencies {
+    implementation("io.github.sceneview:arsceneview:4.0.1")
+
     implementation(platform("androidx.compose:compose-bom:2024.10.00"))
     implementation(platform("com.google.firebase:firebase-bom:34.12.0"))
     implementation("androidx.activity:activity-compose:1.9.3")

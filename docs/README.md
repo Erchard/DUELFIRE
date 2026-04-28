@@ -35,3 +35,5 @@ Start here if you are opening the project for the first time.
 ## Current Truth
 
 Version 0.1 is the source of truth for implementation. Camera Aim Assist is documented as the next product layer, not as an implemented feature.
+
+The **intended** single-phone user experience is **Solo AR** (camera + AR opponent + mutual fire); see `SPECIFICATION.md` and `SOLO_AR_DEMO_SPEC.md`. **Demo Mode** in the app is the interim 2D placeholder until that is built.

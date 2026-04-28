@@ -26,7 +26,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 enum class ScreenState {
     Start,
     Waiting,
-    Battle
+    Battle,
+    SoloAr
 }
 
 data class DuelUiState(
@@ -40,6 +41,7 @@ data class DuelUiState(
     val errorMessage: String? = null,
     val isLoading: Boolean = false,
     val isDemoMode: Boolean = false,
+    val isSoloArMode: Boolean = false,
     val lastDamageText: String? = null,
     val hitFlash: Boolean = false,
     val fireBlockedUntilMs: Long = 0L
@@ -86,7 +88,8 @@ class DuelViewModel(
                                     screenState = ScreenState.Waiting,
                                     statusMessage = "WAITING",
                                     isLoading = false,
-                                    isDemoMode = false
+                                    isDemoMode = false,
+                                    isSoloArMode = false
                                 )
                             }
                             observeDuel(code)
@@ -126,7 +129,8 @@ class DuelViewModel(
                                     screenState = ScreenState.Waiting,
                                     statusMessage = "WAITING",
                                     isLoading = false,
-                                    isDemoMode = false
+                                    isDemoMode = false,
+                                    isSoloArMode = false
                                 )
                             }
                             observeDuel(cleanCode)
@@ -209,6 +213,10 @@ class DuelViewModel(
 
     fun resetDuel() {
         val state = uiState.value
+        if (state.isSoloArMode) {
+            startSoloArMode()
+            return
+        }
         if (state.isDemoMode) {
             startDemoMode()
             return
@@ -259,7 +267,41 @@ class DuelViewModel(
             currentDuel = duel,
             screenState = ScreenState.Battle,
             statusMessage = "READY",
-            isDemoMode = true
+            isDemoMode = true,
+            isSoloArMode = false
+        )
+        demoEnemyJob = viewModelScope.launch {
+            while (true) {
+                delay(3000L)
+                demoEnemyFire()
+            }
+        }
+    }
+
+    fun startSoloArMode() {
+        networkJob?.cancel()
+        val now = System.currentTimeMillis()
+        val duel = Duel(
+            duelCode = "SOLO_AR",
+            status = GameConstants.STATUS_ACTIVE,
+            createdAt = now,
+            updatedAt = now,
+            players = mapOf(
+                GameConstants.PLAYER_1 to Player(id = GameConstants.PLAYER_1, name = uiState.value.playerName.ifBlank { "You" }),
+                GameConstants.PLAYER_2 to Player(id = GameConstants.PLAYER_2, name = "AR Enemy")
+            )
+        )
+        observeJob?.cancel()
+        demoEnemyJob?.cancel()
+        _uiState.value = DuelUiState(
+            playerName = uiState.value.playerName,
+            duelCode = "SOLO_AR",
+            myPlayerId = GameConstants.PLAYER_1,
+            currentDuel = duel,
+            screenState = ScreenState.SoloAr,
+            statusMessage = "READY",
+            isDemoMode = true,
+            isSoloArMode = true
         )
         demoEnemyJob = viewModelScope.launch {
             while (true) {
